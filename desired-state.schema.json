@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:apexfabric:tvt-mills-pilot:desired-state:1",
+  "title": "TVT Mills pilot desired state v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["edge_id", "revision", "cameras"],
+  "properties": {
+    "edge_id": {"type": "string", "minLength": 1},
+    "revision": {"type": "integer", "minimum": 1},
+    "cameras": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/camera"}
+    }
+  },
+  "$defs": {
+    "point": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": false,
+      "prefixItems": [
+        {"type": "number", "minimum": 0, "maximum": 1},
+        {"type": "number", "minimum": 0, "maximum": 1}
+      ]
+    },
+    "zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "poly"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+        "name": {"type": "string", "minLength": 1},
+        "poly": {
+          "type": "array",
+          "minItems": 3,
+          "items": {"$ref": "#/$defs/point"}
+        }
+      }
+    },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "points", "accepted"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+        "name": {"type": "string", "minLength": 1},
+        "type": {"const": "line"},
+        "points": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {"$ref": "#/$defs/point"}
+        },
+        "accepted": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["A->B", "B->A"]}
+        }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["camera_id", "source", "solution_pack", "fps", "apps", "config"],
+      "properties": {
+        "camera_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+        "source": {
+          "type": "string",
+          "pattern": "^file:/run/secrets/apexfabric/[A-Za-z0-9._-]+\\.rtsp$"
+        },
+        "solution_pack": {"const": "tvt-mills-pilot"},
+        "fps": {"type": "number", "exclusiveMinimum": 0},
+        "apps": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["face_recognition", "face_enrollment", "anpr"]}
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "zones": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "anpr": {
+                  "type": "array",
+                  "items": {"$ref": "#/$defs/zone"}
+                }
+              }
+            },
+            "lines": {
+              "type": "array",
+              "items": {"$ref": "#/$defs/line"}
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "apps": {"contains": {"const": "face_enrollment"}}
+            },
+            "required": ["apps"]
+          },
+          "then": {
+            "properties": {
+              "apps": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {"const": "face_enrollment"}
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

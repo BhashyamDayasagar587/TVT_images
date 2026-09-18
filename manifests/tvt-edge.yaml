@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tvt-edge-state
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: {storage: 20Gi}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tvt-edge-desired-state
+data:
+  desired_state.json: |
+    {
+      "edge_id": "tvt-mills-edge-01",
+      "revision": 1,
+      "cameras": [{
+        "camera_id": "back-exit",
+        "source": "file:/run/secrets/apexfabric/back-exit.rtsp",
+        "solution_pack": "tvt-mills-pilot",
+        "fps": 5,
+        "apps": ["face_recognition"],
+        "config": {
+          "zones": {"anpr": []},
+          "lines": [{"id": "back-exit-gate", "name": "Back exit gate", "type": "line", "points": [[0.5, 0.08], [0.5, 0.95]], "accepted": ["B->A"]}]
+        }
+      }]
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tvt-edge-rtsp
+type: Opaque
+stringData:
+  back-exit.rtsp: "rtsp://replace-with-real-secret"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tvt-edge
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: tvt-edge}
+  template:
+    metadata:
+      labels: {app: tvt-edge}
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        fsGroup: 10001
+      containers:
+        - name: tvt-edge
+          image: localhost/tvt-edge-runtime:intel-285h-2026.09.18-v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - {name: http, containerPort: 8080}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: "4", memory: 8Gi}
+            limits: {cpu: "16", memory: 24Gi}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          volumeMounts:
+            - {name: state, mountPath: /state}
+            - {name: desired-state, mountPath: /configs, readOnly: true}
+            - {name: rtsp, mountPath: /run/secrets/apexfabric, readOnly: true}
+            - {name: temp, mountPath: /tmp/apexfabric}
+            - {name: dri, mountPath: /dev/dri}
+            - {name: accel, mountPath: /dev/accel}
+      volumes:
+        - name: state
+          persistentVolumeClaim: {claimName: tvt-edge-state}
+        - name: desired-state
+          configMap: {name: tvt-edge-desired-state}
+        - name: rtsp
+          secret: {secretName: tvt-edge-rtsp}
+        - name: temp
+          emptyDir: {sizeLimit: 4Gi}
+        - name: dri
+          hostPath: {path: /dev/dri, type: Directory}
+        - name: accel
+          hostPath: {path: /dev/accel, type: Directory}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tvt-edge
+spec:
+  selector: {app: tvt-edge}
+  ports:
+    - {name: http, port: 8080, targetPort: http}

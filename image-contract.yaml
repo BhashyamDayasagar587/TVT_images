@@ -1,0 +1,50 @@
+apiVersion: apexfabric.io/v1
+kind: SolutionImageContract
+metadata:
+  name: tvt-mills-pilot
+  version: "1.0"
+spec:
+  image:
+    reference: localhost/tvt-edge-runtime:intel-285h-2026.09.18-v1
+    archive: tvt-edge-runtime-intel-285h-2026.09.18-v1.oci.tar
+    parent:
+      reference: localhost/traffic-pilot-runtime:intel-285h-2026.09.16-v8
+      digest: sha256:ab82879f3a8145b642cdf0addaf00f447a9c4c08a0c91072a6c7e4cc34f1c002
+      buildNormalization:
+        method: podman-export-import-unchanged-rootfs
+        localReference: localhost/tvt-v8-normalized:intel-285h-2026.09.16-v8
+        localImageId: sha256:f99f30387c8c12b0a255b1dfab0256e9f9c403853f1431be37d23f124e910f2d
+        reason: original local V8 layer metadata used an unsupported uncompressed MIME type
+  platform:
+    os: linux
+    architecture: amd64
+    hardwareProfile: intel-285h
+    devices: [/dev/dri, /dev/accel]
+  process:
+    uid: 10001
+    gid: 10001
+    port: 8080
+    readOnlyRootFilesystem: true
+    terminationSignal: SIGTERM
+  mounts:
+    - {path: /state, purpose: mutable snapshots, writable: true}
+    - {path: /configs, purpose: desired state, writable: false}
+    - {path: /run/secrets/apexfabric, purpose: RTSP URL secret files, writable: false}
+    - {path: /tmp/apexfabric, purpose: caches and diagnostics, writable: true}
+  routes:
+    - {method: GET, path: /healthz}
+    - {method: GET, path: /readyz}
+    - {method: GET, path: /metrics}
+    - {method: GET, path: /events, protocol: SSE}
+    - {method: GET, path: "/snapshots/{camera_id}/{file}"}
+  schemas:
+    desiredState: desired-state.schema.json
+    analyticsEvent: analytics-event.schema.json
+  behavior:
+    snapshotIntervalSeconds: 5
+    snapshotRetentionOwner: manager
+    dynamicGeometry: frame-boundary-atomic
+    enrollmentScope: entire-selected-camera
+    bodyEmbedding: not-in-v1
+    managerEventDeduplicationKey: event_id
+    sseResumeHeader: Last-Event-ID
