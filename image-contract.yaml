@@ -5,8 +5,8 @@ metadata:
   version: "1.0"
 spec:
   image:
-    reference: localhost/tvt-edge-runtime:intel-285h-2026.09.18-v1
-    archive: tvt-edge-runtime-intel-285h-2026.09.18-v1.oci.tar
+    reference: localhost/tvt-edge-runtime:intel-285h-2026.09.18-v2-ungated-enroll
+    archive: tvt-edge-runtime-intel-285h-2026.09.18-v2-ungated-enroll.oci.tar
     parent:
       reference: localhost/traffic-pilot-runtime:intel-285h-2026.09.16-v8
       digest: sha256:ab82879f3a8145b642cdf0addaf00f447a9c4c08a0c91072a6c7e4cc34f1c002
