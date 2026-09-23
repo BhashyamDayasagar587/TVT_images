@@ -57,7 +57,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: tvt-edge
-          image: localhost/tvt-edge-runtime:intel-285h-2026.09.18-v1
+          image: localhost/tvt-edge-runtime:intel-285h-2026.09.18-v2-ungated-enroll
           imagePullPolicy: IfNotPresent
           ports:
             - {name: http, containerPort: 8080}

@@ -16,5 +16,12 @@ Load the archive with:
 podman load -i tvt-edge-runtime-intel-285h-2026.09.18-v1.oci.tar
 ```
 
+v2-ungated-enroll (face_enrollment emits on any usable face, no line-cross
+needed; face_recognition/anpr stay crossing-gated):
+
+```sh
+podman load -i tvt-edge-runtime-intel-285h-2026.09.18-v2-ungated-enroll.oci.tar
+```
+
 The example RTSP URL and geometry are placeholders. Replace them through the
 cluster's secret/config delivery process before deployment.
